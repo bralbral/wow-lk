@@ -2,7 +2,7 @@ name: Build and publish pinned WotLK images
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - 'versions.env'
       - 'scripts/bootstrap.sh'
