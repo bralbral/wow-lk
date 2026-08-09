@@ -33,10 +33,10 @@ Additional modules:
 - [Game State API](https://github.com/abutbul/mod-game-state-api)
 - [Autosort](https://github.com/silviu20092/mod-autosort)
 - [Autolearn Skills](https://github.com/poorhatsoap/mod-autolearn-skills)
-- [AOE Loot](https://github.com/Seaferer/AOE-loot---merge)
+- [AOE Loot](https://github.com/azerothcore/mod-aoe-loot)
 - [GM Realm First Fix](https://github.com/Haeniken/mod-gm-realmfirst-fix)
 
-`DungeonRespawn` and `AOE Loot` include small compatibility patches for the pinned Playerbot core. They are applied automatically during bootstrap.
+`DungeonRespawn` includes a small compatibility patch for the pinned Playerbot core. It is applied automatically during bootstrap.
 
 ## Client connection
 
@@ -70,6 +70,7 @@ docker compose up -d --force-recreate ac-worldserver
 | `WOW_MAX_PLAYERS` | `20` | Maximum real player connections. |
 | `WOW_MAP_UPDATE_THREADS` | `2` | Map update threads. Use no more than available CPU cores. |
 | `WOW_RATE_XP_KILL`, `WOW_RATE_XP_QUEST`, `WOW_RATE_MONEY` | `1` | Kill XP, quest XP, and money rate multipliers. |
+| `WOW_DATABASE_UPDATES` | `7` | Databases to update on startup: `1` auth, `2` characters, `4` world; `7` applies all official pending updates. |
 | `WOW_PLAYERBOTS_ENABLED` | `1` | Enables Playerbots. |
 | `WOW_RANDOM_BOTS_AUTOLOGIN` | `1` | Automatically logs in random bots. |
 | `WOW_RANDOM_BOTS_MIN`, `WOW_RANDOM_BOTS_MAX` | `30`, `50` | Random bot target range. Increase gradually while monitoring CPU and RAM. |
@@ -98,7 +99,7 @@ All module settings are controlled from `.env`; `conf/wow.env.template` converts
 | Game State API | `WOW_GAME_STATE_API_*` | Disabled by default. When enabled it listens on container port `8080`, published to `127.0.0.1:8080` by default. It has no authentication; do not expose it publicly. |
 | Autosort | `WOW_AUTOSORT_*` | Controls stack merging, bag sorting, login sorting, cooldown, pinned items, and periodic sorting. |
 | Autolearn Skills | `WOW_AUTOLEARN_*` | Controls weapon skills, riding ranks, mounts, and Cold Weather Flying. Default grants only Apprentice riding/mount. |
-| AOE Loot | `WOW_AOE_LOOT_ENABLED`, `WOW_AOE_LOOT_IN_GROUP` | Merges nearby eligible creature loot into the selected corpse; group support is configurable. |
+| AOE Loot | `WOW_AOE_LOOT_ENABLED`, `WOW_AOE_LOOT_MESSAGE`, `WOW_AOE_LOOT_RANGE`, `WOW_AOE_LOOT_IN_GROUP` | Official AzerothCore module. Merges nearby eligible creature loot into the selected corpse; range is 5–100 yards and group support is configurable. Login message is disabled by default. |
 
 After changing `.env`, apply the values with:
 

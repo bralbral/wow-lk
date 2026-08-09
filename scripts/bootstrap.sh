@@ -35,12 +35,8 @@ git clone https://github.com/silviu20092/mod-autosort.git "$server/modules/mod-a
 git -C "$server/modules/mod-autosort" checkout "$AUTOSORT_REF"
 git clone https://github.com/poorhatsoap/mod-autolearn-skills.git "$server/modules/mod-autolearn-skills"
 git -C "$server/modules/mod-autolearn-skills" checkout "$AUTOLEARN_SKILLS_REF"
-# This repository keeps the actual module one directory below its checkout.
-git clone https://github.com/Seaferer/AOE-loot---merge.git "$server/modules/.mod-aoe-loot-repo"
-git -C "$server/modules/.mod-aoe-loot-repo" checkout "$AOE_LOOT_REF"
-git -C "$server/modules/.mod-aoe-loot-repo" apply "$root/patches/mod-aoe-loot-loader-playerbot.patch"
-git -C "$server/modules/.mod-aoe-loot-repo" apply --ignore-space-change "$root/patches/mod-aoe-loot-packet-playerbot.patch"
-ln -s .mod-aoe-loot-repo/mod-aoeloot "$server/modules/mod-aoe-loot"
+git clone https://github.com/azerothcore/mod-aoe-loot.git "$server/modules/mod-aoe-loot"
+git -C "$server/modules/mod-aoe-loot" checkout "$AOE_LOOT_REF"
 git clone https://github.com/Haeniken/mod-gm-realmfirst-fix.git "$server/modules/mod-gm-realmfirst-fix"
 git -C "$server/modules/mod-gm-realmfirst-fix" checkout "$GM_REALMFIRST_FIX_REF"
 

@@ -45,10 +45,10 @@ services:
       - /bin/sh
       - -ec
       - |
-        for name in playerbots mod_ahbot transmog dungeonrespawn IpTracker mod_autofish gamestate_api mod_autosort mod_autolearn_skills AOElootmodule; do
+        for name in playerbots mod_ahbot transmog dungeonrespawn IpTracker mod_autofish gamestate_api mod_autosort mod_autolearn_skills mod_aoe_loot; do
           target="/azerothcore/env/dist/etc/modules/$${name}.conf"
-          dist="$${target}.dist"
-          if [ ! -f "$$target" ]; then cp "$$dist" "$$target"; fi
+          dist="/azerothcore/env/ref/etc/modules/$${name}.conf.dist"
+          if [ ! -f "$$target" ] && [ -f "$$dist" ]; then cp "$$dist" "$$target"; fi
         done
     volumes:
       - ${DOCKER_VOL_ETC:-./env/dist/etc}:/azerothcore/env/dist/etc
