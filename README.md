@@ -64,6 +64,7 @@ docker compose up -d --force-recreate ac-worldserver
 | `WOW_REALM_ADDRESS` | `127.0.0.1` | Address sent to the client; must match the client realmlist. |
 | `DOCKER_DB_ROOT_PASSWORD` | example value | MySQL root password. Set before first start; do not change it afterward without migrating the existing database. |
 | `DOCKER_*_EXTERNAL_PORT` | `3306`, `3724`, `8085`, `7878` | Published MySQL, auth, world, and SOAP ports. Keep MySQL and SOAP local-only. |
+| `DOCKER_GAME_STATE_API_BIND_ADDRESS`, `DOCKER_GAME_STATE_API_EXTERNAL_PORT` | `127.0.0.1`, `8080` | Host binding and port for the optional Game State API. Local-only by default. |
 | `WOW_DB_DATA_DIR` | `../data/mysql` | Host path for the MySQL data directory, evaluated from `server/`. |
 | `WOW_GAME_TYPE` | `0` | Realm type: `0` PvE, `1` PvP. |
 | `WOW_MAX_PLAYERS` | `20` | Maximum real player connections. |
@@ -94,7 +95,7 @@ All module settings are controlled from `.env`; `conf/wow.env.template` converts
 | Dungeon Respawn | `WOW_DUNGEON_RESPAWN_ENABLED`, `WOW_DUNGEON_RESPAWN_HEALTH_PCT` | Returns a dead player to the dungeon entrance with the selected health percentage. |
 | IP Tracker | `WOW_IP_TRACKER_ENABLED`, `WOW_IP_TRACKER_CLEANUP_DAYS` | Records account IP history. `0` disables automatic cleanup. |
 | Autofish | `WOW_AUTOFISH_*` | Controls bobber scan timing/range, automatic looting/recasting, and optional required item/equipment IDs. |
-| Game State API | `WOW_GAME_STATE_API_*` | Disabled by default. Enable only when needed; keep the host as `127.0.0.1` unless the API is intentionally exposed. |
+| Game State API | `WOW_GAME_STATE_API_*` | Disabled by default. When enabled it listens on container port `8080`, published to `127.0.0.1:8080` by default. It has no authentication; do not expose it publicly. |
 | Autosort | `WOW_AUTOSORT_*` | Controls stack merging, bag sorting, login sorting, cooldown, pinned items, and periodic sorting. |
 | Autolearn Skills | `WOW_AUTOLEARN_*` | Controls weapon skills, riding ranks, mounts, and Cold Weather Flying. Default grants only Apprentice riding/mount. |
 | AOE Loot | `WOW_AOE_LOOT_ENABLED`, `WOW_AOE_LOOT_IN_GROUP` | Merges nearby eligible creature loot into the selected corpse; group support is configurable. |
@@ -105,6 +106,8 @@ After changing `.env`, apply the values with:
 cd server
 docker compose up -d --force-recreate ac-worldserver
 ```
+
+To enable the Game State API locally, set `WOW_GAME_STATE_API_ENABLED=1` and restart the worldserver. Access it at `http://127.0.0.1:8080`. For LAN access, set `DOCKER_GAME_STATE_API_BIND_ADDRESS` to the host LAN IP and restrict it with a firewall.
 
 To add the portable Transmog NPC as a GM:
 

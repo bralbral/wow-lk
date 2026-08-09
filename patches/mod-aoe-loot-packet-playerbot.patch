@@ -1,0 +1,23 @@
+diff --git a/mod-aoeloot/src/aoeloot.cpp b/mod-aoeloot/src/aoeloot.cpp
+index beea480..84ce972 100644
+--- a/mod-aoeloot/src/aoeloot.cpp
++++ b/mod-aoeloot/src/aoeloot.cpp
+@@ -15,7 +15,7 @@ class AOEloot_sscript : public ServerScript {
+ public:
+     AOEloot_sscript() : ServerScript("AOEloot_sscript") {}
+    
+-    bool CanPacketReceive(WorldSession* session, WorldPacket& packet) override
++    bool CanPacketReceive(WorldSession* session, WorldPacket const& packet) override
+     {
+         if (packet.GetOpcode() == CMSG_LOOT)
+         {
+@@ -28,7 +28,8 @@ public:
+                 return true;
+ 
+             std::list<Creature*> lootcreature; player->GetDeadCreatureListInGrid(lootcreature, 55.f);
+-            ObjectGuid guid; packet >> guid;
++            WorldPacket packetCopy(packet);
++            ObjectGuid guid; packetCopy >> guid;
+             Loot* mainloot = &(player->GetMap()->GetCreature(guid))->loot;   
+ 
+             for (auto itr = lootcreature.begin(); itr != lootcreature.end(); ++itr)

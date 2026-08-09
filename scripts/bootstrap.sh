@@ -41,6 +41,7 @@ git clone https://github.com/Seaferer/AOE-loot---merge.git "$server/modules/.mod
 git -C "$server/modules/.mod-aoe-loot-repo" checkout "$AOE_LOOT_REF"
 git -C "$server/modules/.mod-aoe-loot-repo" apply --ignore-space-change "$root/patches/mod-aoe-loot-playerbot.patch"
 git -C "$server/modules/.mod-aoe-loot-repo" apply "$root/patches/mod-aoe-loot-loader-playerbot.patch"
+git -C "$server/modules/.mod-aoe-loot-repo" apply --ignore-space-change "$root/patches/mod-aoe-loot-packet-playerbot.patch"
 ln -s .mod-aoe-loot-repo/mod-aoeloot "$server/modules/mod-aoe-loot"
 git clone https://github.com/Haeniken/mod-gm-realmfirst-fix.git "$server/modules/mod-gm-realmfirst-fix"
 git -C "$server/modules/mod-gm-realmfirst-fix" checkout "$GM_REALMFIRST_FIX_REF"
