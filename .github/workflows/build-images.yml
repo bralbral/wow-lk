@@ -62,20 +62,21 @@ jobs:
           DOCKER_DEFAULT_PLATFORM: linux/amd64
         run: docker compose build ac-db-import ac-client-data-init ac-authserver ac-worldserver
 
-      - name: Push immutable image set to Docker Hub
-        working-directory: server
+      - name: Tag and push the air-gapped image set
         env:
-          WOW_IMAGE_PREFIX: ${{ steps.image.outputs.prefix }}
-          WOW_IMAGE_TAG: ${{ steps.image.outputs.tag }}
-        run: docker compose push ac-db-import ac-client-data-init ac-authserver ac-worldserver
-
-      - name: Tag and push the main server image
-        env:
-          IMAGE: bral1488/wowlk-worldserver:${{ steps.image.outputs.tag }}
+          IMAGE_PREFIX: bral1488/wowlk
           DATE_TAG: ${{ steps.image.outputs.date_tag }}
           SHA_TAG: ${{ steps.image.outputs.tag }}
         run: |
+          for suffix in -worldserver -authserver -db-import -client-data; do
+            image="$IMAGE_PREFIX$suffix"
+            for tag in latest "$DATE_TAG" "$SHA_TAG"; do
+              docker tag "$image:$SHA_TAG" "$image:$tag"
+              docker push "$image:$tag"
+            done
+          done
+
           for tag in latest "$DATE_TAG" "$SHA_TAG"; do
-            docker tag "$IMAGE" "bral1488/wowlk:$tag"
-            docker push "bral1488/wowlk:$tag"
+            docker tag "$IMAGE_PREFIX-worldserver:$SHA_TAG" "$IMAGE_PREFIX:$tag"
+            docker push "$IMAGE_PREFIX:$tag"
           done

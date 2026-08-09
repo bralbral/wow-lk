@@ -153,15 +153,20 @@ Then use a GM character to run `.ahbot update` in game for immediate population.
 
 ## Published images
 
-GitHub Actions runs on `ubuntu-24.04`, builds `linux/amd64`, and publishes the primary worldserver image to Docker Hub:
+GitHub Actions runs on `ubuntu-24.04`, builds `linux/amd64`, and publishes the complete air-gapped image set. Each image receives the same three tags: `latest`, the UTC build date (`YYYYMMDD`), and the full Git SHA.
 
 ```text
 bral1488/wowlk:latest
 bral1488/wowlk:YYYYMMDD
 bral1488/wowlk:<full-git-sha>
+
+bral1488/wowlk-worldserver:<same-tag>
+bral1488/wowlk-authserver:<same-tag>
+bral1488/wowlk-db-import:<same-tag>
+bral1488/wowlk-client-data:<same-tag>
 ```
 
-The same immutable SHA is also published for the required companion images under `bral1488/wowlk-{authserver,db-import,client-data}`.
+`bral1488/wowlk` is a convenient alias for `bral1488/wowlk-worldserver`. For a fully offline first deployment, also preload `mysql:8.4`, which is the database image used by Compose.
 
 ## Backups
 
