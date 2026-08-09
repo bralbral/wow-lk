@@ -109,6 +109,32 @@ docker compose up -d --force-recreate ac-worldserver
 
 To enable the Game State API locally, set `WOW_GAME_STATE_API_ENABLED=1` and restart the worldserver. Access it at `http://127.0.0.1:8080`. For LAN access, set `DOCKER_GAME_STATE_API_BIND_ADDRESS` to the host LAN IP and restrict it with a firewall.
 
+### Game State API endpoints
+
+The API has no web page at `/`; use an `/api/...` endpoint. All responses are JSON.
+
+| Endpoint | Description |
+| --- | --- |
+| `GET /api/health` | Health check and server uptime. |
+| `GET /api/server` | Current server time, uptime, session, and player counts. |
+| `GET /api/players` | Online player list. Add `?equipment=true` to include equipment. |
+| `GET /api/player/<name>` | Detailed data for one online player. Add `?equipment=true` to include equipment. |
+| `GET /api/player/<name>/stats` | Character stats, health, powers, and combat values. |
+| `GET /api/player/<name>/equipment` | Equipped items and item details. |
+| `GET /api/player/<name>/skills` | Active skills and talent data. |
+| `GET /api/player/<name>/skills-full` | Complete skills and talent data, including passive skills. |
+| `GET /api/player/<name>/quests` | Active quest data. |
+
+Examples:
+
+```bash
+curl http://127.0.0.1:8080/api/health
+curl http://127.0.0.1:8080/api/server
+curl 'http://127.0.0.1:8080/api/player/CharacterName/stats'
+```
+
+The endpoints expose live player and realm information without authentication. Keep the default local-only API binding unless access is protected by a firewall or reverse proxy.
+
 To add the portable Transmog NPC as a GM:
 
 ```text
