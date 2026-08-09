@@ -134,20 +134,6 @@ bral1488/wowlk:<full-git-sha>
 
 The same immutable SHA is also published for the required companion images under `bral1488/wowlk-{authserver,db-import,client-data}`.
 
-Before triggering the workflow, add these GitHub repository secrets under **Settings → Secrets and variables → Actions**:
-
-- `DOCKERHUB_USERNAME`: Docker Hub user `bral1488`.
-- `DOCKERHUB_TOKEN`: Docker Hub access token with Read & Write permission.
-
-To use an immutable published image set instead of building locally:
-
-```dotenv
-WOW_IMAGE_PREFIX=bral1488/wowlk
-WOW_IMAGE_TAG=<full-git-sha>
-```
-
-Run `docker login` first if the Docker Hub repositories are private.
-
 ## Backups
 
 ```bash
