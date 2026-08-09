@@ -13,6 +13,8 @@ services:
     depends_on:
       wow-module-config-init:
         condition: service_completed_successfully
+      wow-extra-module-schema-init:
+        condition: service_completed_successfully
       wow-realm-init:
         condition: service_completed_successfully
 
@@ -70,6 +72,30 @@ services:
         until mysql -h ac-database -u root acore_auth -e 'SELECT 1 FROM realmlist LIMIT 1' >/dev/null 2>&1; do sleep 2; done;
         mysql -h ac-database -u root acore_auth -e
         "UPDATE realmlist SET name='$$WOW_REALM_NAME', address='$$WOW_REALM_ADDRESS' WHERE id=1;"
+    depends_on:
+      ac-db-import:
+        condition: service_completed_successfully
+
+  # Applies idempotent base schemas that third-party modules keep outside
+  # AzerothCore's normal data/sql update tree. It runs after db-import and
+  # before worldserver, so a fresh bootstrap needs no manual SQL import.
+  wow-extra-module-schema-init:
+    image: mysql:8.4
+    networks:
+      - ac-network
+    restart: "no"
+    environment:
+      MYSQL_PWD: "${DOCKER_DB_ROOT_PASSWORD}"
+    command:
+      - /bin/sh
+      - -ec
+      - >-
+        until mysql -h ac-database -u root acore_characters -e 'SELECT 1' >/dev/null 2>&1; do sleep 2; done;
+        mysql -h ac-database -u root acore_characters < /sql/dungeonrespawn.sql;
+        mysql -h ac-database -u root acore_auth < /sql/account-ip.sql;
+    volumes:
+      - ./module-schema/dungeonrespawn.sql:/sql/dungeonrespawn.sql:ro
+      - ./module-schema/account-ip.sql:/sql/account-ip.sql:ro
     depends_on:
       ac-db-import:
         condition: service_completed_successfully

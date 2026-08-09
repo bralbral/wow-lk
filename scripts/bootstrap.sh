@@ -55,17 +55,9 @@ for database in auth characters world; do
   fi
 done
 
-# The two modules below ship schema files outside AzerothCore's usual update
-# tree. Copy them into the core update directories so db-import applies them.
-for database in auth characters world; do
-  target_dir="$server/data/sql/updates/db_$database"
-  find "$server/modules/mod-dungeon-respawn/data/sql/db-$database" \
-       "$server/modules/mod-ip-tracker/data/sql/db-$database" \
-       -type f -name '*.sql' -exec cp {} "$target_dir/" \; 2>/dev/null || true
-done
-
 cp "$root/docker-compose.override.yml.template" "$server/docker-compose.override.yml"
 cp "$root/conf/wow.env.template" "$server/conf/wow.env"
+cp -R "$root/module-schema" "$server/module-schema"
 
 if [[ ! -f "$root/.env" ]]; then
   cp "$root/.env.example" "$root/.env"

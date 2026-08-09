@@ -14,7 +14,7 @@ cp .env.example .env
 cd server && docker compose ps
 ```
 
-MySQL data is stored in `data/mysql` on the host. Source revisions are pinned in [versions.env](versions.env); do not replace them with branches for a production realm.
+MySQL data is stored in `data/mysql` on the host. Source revisions are pinned in [versions.env](versions.env); do not replace them with branches for a production realm. A fresh install automatically creates module configs and the extra DungeonRespawn/IP Tracker database tables using idempotent schemas; no manual SQL or config edits are required to start.
 
 ## Included sources
 
@@ -87,7 +87,24 @@ docker compose up -d --force-recreate ac-worldserver
 | `WOW_TRANSMOG_COPPER_COST` | `0` | Fixed additional transmog price in copper. `10000` copper is one gold. |
 | `WOW_TRANSMOG_MIXED_WEAPONS` | `1` | Weapon appearance rules: `0` strict, `1` modern compatibility, `2` unrestricted. |
 
-Module-specific configuration files are created once in `server/env/dist/etc/modules/`. Edit them there to configure Autofish, Autosort, Autolearn Skills, DungeonRespawn, AOE Loot, IP Tracker, or Game State API. Restart `ac-worldserver` after changes. The initial defaults come from each linked source repository.
+All module settings are controlled from `.env`; `conf/wow.env.template` converts them to AzerothCore `AC_*` environment variables. Module `*.conf` files are still created in `server/env/dist/etc/modules/`, but do not need manual edits for the included settings.
+
+| Module | `.env` settings | Notes |
+| --- | --- | --- |
+| Dungeon Respawn | `WOW_DUNGEON_RESPAWN_ENABLED`, `WOW_DUNGEON_RESPAWN_HEALTH_PCT` | Returns a dead player to the dungeon entrance with the selected health percentage. |
+| IP Tracker | `WOW_IP_TRACKER_ENABLED`, `WOW_IP_TRACKER_CLEANUP_DAYS` | Records account IP history. `0` disables automatic cleanup. |
+| Autofish | `WOW_AUTOFISH_*` | Controls bobber scan timing/range, automatic looting/recasting, and optional required item/equipment IDs. |
+| Game State API | `WOW_GAME_STATE_API_*` | Disabled by default. Enable only when needed; keep the host as `127.0.0.1` unless the API is intentionally exposed. |
+| Autosort | `WOW_AUTOSORT_*` | Controls stack merging, bag sorting, login sorting, cooldown, pinned items, and periodic sorting. |
+| Autolearn Skills | `WOW_AUTOLEARN_*` | Controls weapon skills, riding ranks, mounts, and Cold Weather Flying. Default grants only Apprentice riding/mount. |
+| AOE Loot | `WOW_AOE_LOOT_ENABLED`, `WOW_AOE_LOOT_IN_GROUP` | Merges nearby eligible creature loot into the selected corpse; group support is configurable. |
+
+After changing `.env`, apply the values with:
+
+```bash
+cd server
+docker compose up -d --force-recreate ac-worldserver
+```
 
 To add the portable Transmog NPC as a GM:
 
