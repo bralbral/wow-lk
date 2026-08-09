@@ -38,7 +38,6 @@ git -C "$server/modules/mod-autolearn-skills" checkout "$AUTOLEARN_SKILLS_REF"
 # This repository keeps the actual module one directory below its checkout.
 git clone https://github.com/Seaferer/AOE-loot---merge.git "$server/modules/.mod-aoe-loot-repo"
 git -C "$server/modules/.mod-aoe-loot-repo" checkout "$AOE_LOOT_REF"
-git -C "$server/modules/.mod-aoe-loot-repo" apply --ignore-space-change "$root/patches/mod-aoe-loot-playerbot.patch"
 git -C "$server/modules/.mod-aoe-loot-repo" apply "$root/patches/mod-aoe-loot-loader-playerbot.patch"
 git -C "$server/modules/.mod-aoe-loot-repo" apply --ignore-space-change "$root/patches/mod-aoe-loot-packet-playerbot.patch"
 ln -s .mod-aoe-loot-repo/mod-aoeloot "$server/modules/mod-aoe-loot"
