@@ -1,0 +1,75 @@
+# Copied into server/docker-compose.override.yml by scripts/bootstrap.sh.
+# It deliberately overlays the compose file supplied by the Playerbot core.
+services:
+  ac-worldserver:
+    image: ${WOW_IMAGE_PREFIX:-acore/ac-wotlk}-worldserver:${WOW_IMAGE_TAG:-master}
+    ports: !override
+      - "${WOW_BIND_ADDRESS:-127.0.0.1}:${DOCKER_WORLD_EXTERNAL_PORT:-8085}:8085"
+      - "${WOW_BIND_ADDRESS:-127.0.0.1}:${DOCKER_SOAP_EXTERNAL_PORT:-7878}:7878"
+    env_file:
+      - conf/wow.env
+    volumes:
+      - ./modules:/azerothcore/modules:ro
+    depends_on:
+      wow-module-config-init:
+        condition: service_completed_successfully
+      wow-realm-init:
+        condition: service_completed_successfully
+
+  ac-authserver:
+    image: ${WOW_IMAGE_PREFIX:-acore/ac-wotlk}-authserver:${WOW_IMAGE_TAG:-master}
+    ports: !override
+      - "${WOW_BIND_ADDRESS:-127.0.0.1}:${DOCKER_AUTH_EXTERNAL_PORT:-3724}:3724"
+
+  ac-database:
+    ports: !override
+      - "${WOW_BIND_ADDRESS:-127.0.0.1}:${DOCKER_DB_EXTERNAL_PORT:-3306}:3306"
+    volumes: !override
+      - "${WOW_DB_DATA_DIR:-../data/mysql}:/var/lib/mysql"
+
+  ac-db-import:
+    image: ${WOW_IMAGE_PREFIX:-acore/ac-wotlk}-db-import:${WOW_IMAGE_TAG:-master}
+
+  ac-client-data-init:
+    image: ${WOW_IMAGE_PREFIX:-acore/ac-wotlk}-client-data:${WOW_IMAGE_TAG:-master}
+
+  # Creates persistent module configs from the image templates once. This runs
+  # before worldserver and never overwrites an existing local configuration.
+  wow-module-config-init:
+    image: ${WOW_IMAGE_PREFIX:-acore/ac-wotlk}-worldserver:${WOW_IMAGE_TAG:-master}
+    entrypoint: []
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        for name in playerbots mod_ahbot transmog dungeonrespawn IpTracker mod_autofish gamestate_api mod_autosort mod_autolearn_skills AOElootmodule; do
+          target="/azerothcore/env/dist/etc/modules/$${name}.conf"
+          dist="$${target}.dist"
+          if [ ! -f "$$target" ]; then cp "$$dist" "$$target"; fi
+        done
+    volumes:
+      - ${DOCKER_VOL_ETC:-./env/dist/etc}:/azerothcore/env/dist/etc
+    restart: "no"
+
+  # Realm fields live in acore_auth, not in worldserver.conf. This small,
+  # idempotent job makes them controllable through .env too.
+  wow-realm-init:
+    image: mysql:8.4
+    networks:
+      - ac-network
+    restart: "no"
+    environment:
+      MYSQL_PWD: "${DOCKER_DB_ROOT_PASSWORD}"
+      WOW_REALM_NAME: "${WOW_REALM_NAME}"
+      WOW_REALM_ADDRESS: "${WOW_REALM_ADDRESS}"
+    command:
+      - /bin/sh
+      - -ec
+      - >-
+        until mysql -h ac-database -u root -e 'SELECT 1' >/dev/null 2>&1; do sleep 2; done;
+        until mysql -h ac-database -u root acore_auth -e 'SELECT 1 FROM realmlist LIMIT 1' >/dev/null 2>&1; do sleep 2; done;
+        mysql -h ac-database -u root acore_auth -e
+        "UPDATE realmlist SET name='$$WOW_REALM_NAME', address='$$WOW_REALM_ADDRESS' WHERE id=1;"
+    depends_on:
+      ac-db-import:
+        condition: service_completed_successfully

@@ -1,0 +1,81 @@
+name: Build and publish pinned WotLK images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'versions.env'
+      - 'scripts/bootstrap.sh'
+      - 'scripts/initialize-module-configs.sh'
+      - 'docker-compose.override.yml.template'
+      - 'conf/wow.env.template'
+      - '.github/workflows/build-images.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-24.04
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image coordinates
+        id: image
+        shell: bash
+        run: |
+          test -n "$DOCKERHUB_USERNAME"
+          test -n "$DOCKERHUB_TOKEN"
+          echo "prefix=bral1488/wowlk" >> "$GITHUB_OUTPUT"
+          echo "tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "date_tag=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare pinned sources
+        run: |
+          cp .env.example .env
+          ./scripts/bootstrap.sh
+
+      - name: Validate resolved Compose configuration
+        working-directory: server
+        env:
+          WOW_IMAGE_PREFIX: ${{ steps.image.outputs.prefix }}
+          WOW_IMAGE_TAG: ${{ steps.image.outputs.tag }}
+        run: docker compose config -q
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
+
+      - name: Build linux/amd64 server images
+        working-directory: server
+        env:
+          WOW_IMAGE_PREFIX: ${{ steps.image.outputs.prefix }}
+          WOW_IMAGE_TAG: ${{ steps.image.outputs.tag }}
+          DOCKER_DEFAULT_PLATFORM: linux/amd64
+        run: docker compose build ac-db-import ac-client-data-init ac-authserver ac-worldserver
+
+      - name: Push immutable image set to Docker Hub
+        working-directory: server
+        env:
+          WOW_IMAGE_PREFIX: ${{ steps.image.outputs.prefix }}
+          WOW_IMAGE_TAG: ${{ steps.image.outputs.tag }}
+        run: docker compose push ac-db-import ac-client-data-init ac-authserver ac-worldserver
+
+      - name: Tag and push the main server image
+        env:
+          IMAGE: bral1488/wowlk-worldserver:${{ steps.image.outputs.tag }}
+          DATE_TAG: ${{ steps.image.outputs.date_tag }}
+          SHA_TAG: ${{ steps.image.outputs.tag }}
+        run: |
+          for tag in latest "$DATE_TAG" "$SHA_TAG"; do
+            docker tag "$IMAGE" "bral1488/wowlk:$tag"
+            docker push "bral1488/wowlk:$tag"
+          done

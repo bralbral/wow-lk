@@ -1,0 +1,13 @@
+diff --git a/src/DungeonRespawn.cpp b/src/DungeonRespawn.cpp
+index 97bab9f..da9d2fb 100644
+--- a/src/DungeonRespawn.cpp
++++ b/src/DungeonRespawn.cpp
+@@ -284,7 +284,7 @@ void DSPlayerScript::OnLogout(Player* player)
+     }
+ }
+ 
+-void SC_AddDungeonRespawnScripts()
++void Addmod_dungeon_respawnScripts()
+ {
+     new DSWorldScript();
+     new DSPlayerScript();

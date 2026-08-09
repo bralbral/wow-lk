@@ -1,0 +1,13 @@
+diff --git a/mod-aoeloot/src/aoeloot.cpp b/mod-aoeloot/src/aoeloot.cpp
+index beea480..67b7c15 100644
+--- a/mod-aoeloot/src/aoeloot.cpp
++++ b/mod-aoeloot/src/aoeloot.cpp
+@@ -4,7 +4,7 @@ class AOEloot_player : public PlayerScript {
+ public:
+     AOEloot_player() : PlayerScript("AOEloot_player") {}
+ 
+-    void OnLogin(Player* player) override
++    void OnPlayerLogin(Player* player) override
+     {
+         if (sConfigMgr->GetOption<bool>("AOELt.enable", true))        
+             ChatHandler(player->GetSession()).PSendSysMessage("This server is running the |cff4CFF00AOE-loot by Dev. Seaferer|r module.");        
