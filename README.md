@@ -2,6 +2,8 @@
 
 Docker Compose setup for a private World of Warcraft: Wrath of the Lich King 3.3.5a realm. It builds a pinned [AzerothCore Playerbot](https://github.com/mod-playerbots/azerothcore-wotlk) server with gameplay modules, MySQL, and reproducible GitHub Actions images.
 
+> **Educational / personal-use notice.** This repository is an independent learning and self-hosting project assembled from publicly available, open-source projects. It is not affiliated with, endorsed by, or sponsored by Blizzard Entertainment. World of Warcraft and related marks are trademarks of their respective owners. No Blizzard game client, assets, or proprietary server code are distributed here; use it only with software and content you are entitled to use, and comply with the licences of each included upstream project.
+
 The game client is not included.
 
 ## Quick start
@@ -28,6 +30,7 @@ Core and existing modules:
 Additional modules:
 
 - [DungeonRespawn](https://github.com/AnchyDev/DungeonRespawn)
+- [Dungeon Clear](https://github.com/jrad7/mod-dungeon-clear)
 - [IP Tracker](https://github.com/azerothcore/mod-ip-tracker)
 - [Autofish](https://github.com/Flerp/mod-autofish)
 - [Game State API](https://github.com/abutbul/mod-game-state-api)
@@ -89,11 +92,12 @@ docker compose up -d --force-recreate ac-worldserver
 | `WOW_TRANSMOG_COPPER_COST` | `0` | Fixed additional transmog price in copper. `10000` copper is one gold. |
 | `WOW_TRANSMOG_MIXED_WEAPONS` | `1` | Weapon appearance rules: `0` strict, `1` modern compatibility, `2` unrestricted. |
 
-All module settings are controlled from `.env`; `conf/wow.env.template` converts them to AzerothCore `AC_*` environment variables. Module `*.conf` files are still created in `server/env/dist/etc/modules/`, but do not need manual edits for the included settings.
+Most module settings are controlled from `.env`; `conf/wow.env.template` converts them to AzerothCore `AC_*` environment variables. Module `*.conf` files are created in `server/env/dist/etc/modules/`. Dungeon Clear deliberately keeps its tuning in its own module configuration so that settings can also be overridden temporarily by its companion addon.
 
 | Module | `.env` settings | Notes |
 | --- | --- | --- |
 | Dungeon Respawn | `WOW_DUNGEON_RESPAWN_ENABLED`, `WOW_DUNGEON_RESPAWN_HEALTH_PCT` | Returns a dead player to the dungeon entrance with the selected health percentage. |
+| Dungeon Clear | `server/env/dist/etc/modules/mod_dungeon_clear.conf` | No `.env` switch is required. The tank bot is enabled per group with `.dc on`; its server defaults live in this config file. |
 | IP Tracker | `WOW_IP_TRACKER_ENABLED`, `WOW_IP_TRACKER_CLEANUP_DAYS` | Records account IP history. `0` disables automatic cleanup. |
 | Autofish | `WOW_AUTOFISH_*` | Controls bobber scan timing/range, automatic looting/recasting, and optional required item/equipment IDs. |
 | Game State API | `WOW_GAME_STATE_API_*` | Disabled by default. When enabled it listens on container port `8080`, published to `127.0.0.1:8080` by default. It has no authentication; do not expose it publicly. |
@@ -109,6 +113,43 @@ docker compose up -d --force-recreate ac-worldserver
 ```
 
 To enable the Game State API locally, set `WOW_GAME_STATE_API_ENABLED=1` and restart the worldserver. Access it at `http://127.0.0.1:8080`. For LAN access, set `DOCKER_GAME_STATE_API_BIND_ADDRESS` to the host LAN IP and restrict it with a firewall.
+
+### Dungeon Clear: autonomous bot-led dungeon runs
+
+Dungeon Clear is an extension for `mod-playerbots`: a **tank bot** leads a real-player party through an instance, routes to bosses, pulls packs, rests, loots, and handles many scripted events. The healer and DPS bots support that tank automatically. It does not control a player-operated tank; play a follower, or use Playerbot self-bot mode if you want your character driven by AI.
+
+Enter an instance with a bot tank in your group, then use one of these commands as the real player in that group:
+
+| Command | Result |
+| --- | --- |
+| `.dc on` / `.dc off` | Start or stop autonomous clearing. On stop, bots return to their normal following behaviour. |
+| `.dc pause` | Pause in place; run it again to resume. |
+| `.dc skip` | Skip the current objective when the tank is stuck. |
+| `.dc pull` | Cycle pull style: Dynamic (default), Leeroy (faster/riskier), Advanced (safer/slower). |
+| `.dc status` | Show current run state. |
+| `.dc bosses` | Show bosses and their completion state. |
+| `.dc go <boss>` | Send the tank toward a specific named boss. |
+| `.dc config` | Show the effective settings for the current run. |
+| `.dc spectate` | Toggle GM spectator camera; `.dc spectate follow <bot>` follows a bot. |
+
+The equivalent in-party chat keywords are `dc on`, `dc off`, `dc pause`, `dc skip`, `dc pull`, `dc status`, and `dc bosses` (long forms such as `dungeon clear on` also work). `.dc test` is a GM-only automated test harness and is not needed for normal play.
+
+For a visual in-game control panel, install the optional [Dungeon Clear companion addon](https://github.com/jrad7/mod-dungeon-clear-addon) in the game client separately. It can start, pause, skip, select pull mode, display status, and apply temporary per-run overrides; it is not bundled with this server.
+
+#### Dungeon Clear settings
+
+The persistent defaults are in `server/env/dist/etc/modules/mod_dungeon_clear.conf`. Edit that file and reload it with `.reload config` (or recreate `ac-worldserver`). The most useful defaults are:
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `DungeonClear.LootMinQuality` | `0` | Lowest loot quality to collect: `0` grey through `4` epic. |
+| `DungeonClear.RestHealthPct`, `DungeonClear.RestManaPct` | `0`, `0` | Rest targets; `0` inherits Playerbot's normal thresholds. |
+| `DungeonClear.SmartRest` | `0` | `1` uses fewer, full group rest cycles; its health/mana trigger settings are alongside it. |
+| `DungeonClear.PullDynamicMaxLeeroyMobs` | `5` | Maximum estimated pack size the Dynamic mode will take directly. Lower it for more cautious pulls. |
+| `DungeonClear.IgnoreChests` | `1` | Ignore world-object chests to reduce detours; `0` allows chest looting. |
+| `DungeonClear.PreventBotRelease` | `1` | Keeps bots' instance corpses for resurrection instead of automatically releasing. |
+
+Any `DungeonClear.*` setting can have a heroic-specific value by adding `.Heroic`, for example `DungeonClear.PullDynamicMaxLeeroyMobs.Heroic = 2`. The companion addon can override the general settings only for its current run; server-side file values remain the defaults. See the generated `.conf` for the full, commented configuration reference.
 
 ### Game State API endpoints
 

@@ -9,7 +9,7 @@ if [[ ! -d "$config_dir" ]]; then
   exit 1
 fi
 
-for config in playerbots mod_ahbot transmog dungeonrespawn IpTracker mod_autofish gamestate_api mod_autosort mod_autolearn_skills mod_aoe_loot; do
+for config in playerbots mod_ahbot transmog dungeonrespawn mod_dungeon_clear IpTracker mod_autofish gamestate_api mod_autosort mod_autolearn_skills mod_aoe_loot; do
   dist="$config_dir/$config.conf.dist"
   target="$config_dir/$config.conf"
   if [[ ! -f "$dist" ]]; then

@@ -35,6 +35,28 @@ services:
 
   ac-client-data-init:
     image: ${WOW_IMAGE_PREFIX:-acore/ac-wotlk}-client-data:${WOW_IMAGE_TAG:-master}
+    # Client data is written once into a named Docker volume. Run the writer as
+    # root so both a fresh volume and one created by an earlier image can be
+    # initialized; worldserver only mounts this volume read-only.
+    user: "0:0"
+    # The upstream image currently hardcodes v19, while this core requires
+    # v20 mmaps. Keep the data format pinned across fresh volumes and restarts.
+    entrypoint: []
+    command:
+      - /bin/bash
+      - -ec
+      - |
+        data=/azerothcore/env/dist/data
+        version_file="$$data/data-version"
+        if [ -f "$$version_file" ] && grep -qx 'INSTALLED_VERSION=v20' "$$version_file"; then
+          echo 'Client data v20 already installed.'
+          exit 0
+        fi
+        rm -rf "$$data"/*
+        curl -L --fail --retry 3 --output "$$data/data.zip" https://github.com/wowgaming/client-data/releases/download/v20.0/data.zip
+        unzip -q "$$data/data.zip" -d "$$data"
+        rm "$$data/data.zip"
+        printf 'INSTALLED_VERSION=v20\\n' > "$$version_file"
 
   # Creates persistent module configs from the image templates once. This runs
   # before worldserver and never overwrites an existing local configuration.
@@ -45,7 +67,7 @@ services:
       - /bin/sh
       - -ec
       - |
-        for name in playerbots mod_ahbot transmog dungeonrespawn IpTracker mod_autofish gamestate_api mod_autosort mod_autolearn_skills mod_aoe_loot; do
+        for name in playerbots mod_ahbot transmog dungeonrespawn mod_dungeon_clear IpTracker mod_autofish gamestate_api mod_autosort mod_autolearn_skills mod_aoe_loot; do
           target="/azerothcore/env/dist/etc/modules/$${name}.conf"
           dist="/azerothcore/env/ref/etc/modules/$${name}.conf.dist"
           if [ ! -f "$$target" ] && [ -f "$$dist" ]; then cp "$$dist" "$$target"; fi

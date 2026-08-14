@@ -18,6 +18,8 @@ git -C "$server" submodule update --init --recursive
 
 git clone https://github.com/mod-playerbots/mod-playerbots.git "$server/modules/mod-playerbots"
 git -C "$server/modules/mod-playerbots" checkout "$PLAYERBOTS_REF"
+git clone https://github.com/jrad7/mod-dungeon-clear.git "$server/modules/mod-dungeon-clear"
+git -C "$server/modules/mod-dungeon-clear" checkout "$DUNGEON_CLEAR_REF"
 git clone https://github.com/NathanHandley/mod-ah-bot.git "$server/modules/mod-ah-bot"
 git -C "$server/modules/mod-ah-bot" checkout "$AHBOT_REF"
 git clone https://github.com/azerothcore/mod-transmog.git "$server/modules/mod-transmog"
@@ -39,16 +41,6 @@ git clone https://github.com/azerothcore/mod-aoe-loot.git "$server/modules/mod-a
 git -C "$server/modules/mod-aoe-loot" checkout "$AOE_LOOT_REF"
 git clone https://github.com/Haeniken/mod-gm-realmfirst-fix.git "$server/modules/mod-gm-realmfirst-fix"
 git -C "$server/modules/mod-gm-realmfirst-fix" checkout "$GM_REALMFIRST_FIX_REF"
-
-# AzerothCore imports updates from its own data tree, while Transmog ships
-# separate SQL files for three databases.
-for database in auth characters world; do
-  source_dir="$server/modules/mod-transmog/data/sql/db-$database"
-  target_dir="$server/data/sql/updates/db_$database"
-  if [[ -d "$source_dir" ]]; then
-    find "$source_dir" -maxdepth 1 -type f -name '*.sql' -exec cp {} "$target_dir/" \;
-  fi
-done
 
 cp "$root/docker-compose.override.yml.template" "$server/docker-compose.override.yml"
 cp "$root/conf/wow.env.template" "$server/conf/wow.env"
