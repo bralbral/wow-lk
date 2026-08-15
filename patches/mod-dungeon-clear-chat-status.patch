@@ -1,0 +1,28 @@
+diff --git a/src/Ai/Dungeon/DungeonClear/Util/DcStatusPublisher.cpp b/src/Ai/Dungeon/DungeonClear/Util/DcStatusPublisher.cpp
+index 6e858c2..27acd7f 100644
+--- a/src/Ai/Dungeon/DungeonClear/Util/DcStatusPublisher.cpp
++++ b/src/Ai/Dungeon/DungeonClear/Util/DcStatusPublisher.cpp
+@@ -198,6 +198,23 @@ void DcStatusPublisher::SendAddonMessage(PlayerbotAI* botAI, std::string const&
+ 
+     for (Player* receiver : botAI->GetRealPlayersInGroup())
+         ServerFacade::instance().SendPacket(receiver, &data);
++
++    // CHAT frames are human-readable replies to commands such as `.dc status`.
++    // The addon-language packet above is deliberately invisible to an unmodified
++    // WoW client, so mirror these replies as ordinary party chat as well. Keep
++    // the addon frame for the companion addon, which parses its DC payload.
++    static constexpr char kChatPrefix[] = "CHAT\t";
++    if (msg.rfind(kChatPrefix, 0) != 0)
++        return;
++
++    std::string const chatText = msg.substr(sizeof(kChatPrefix) - 1);
++    WorldPacket chatData;
++    ChatHandler::BuildChatPacket(chatData, CHAT_MSG_PARTY, chatText.c_str(),
++                                 LANG_UNIVERSAL, CHAT_TAG_NONE,
++                                 bot->GetGUID(), bot->GetName());
++
++    for (Player* receiver : botAI->GetRealPlayersInGroup())
++        ServerFacade::instance().SendPacket(receiver, &chatData);
+ }
+ std::string DcStatusPublisher::BuildStatusPayload(PlayerbotAI* botAI)
+ {

@@ -67,7 +67,7 @@ services:
       - /bin/sh
       - -ec
       - |
-        for name in playerbots mod_ahbot transmog dungeonrespawn mod_dungeon_clear IpTracker mod_autofish gamestate_api mod_autosort mod_autolearn_skills mod_aoe_loot; do
+        for name in playerbots mod_ahbot transmog 1v1arena dungeonrespawn mod_dungeon_clear mod_account_mount IpTracker mod_autofish gamestate_api mod_autosort mod_autolearn_skills mod_aoe_loot; do
           target="/azerothcore/env/dist/etc/modules/$${name}.conf"
           dist="/azerothcore/env/ref/etc/modules/$${name}.conf.dist"
           if [ ! -f "$$target" ] && [ -f "$$dist" ]; then cp "$$dist" "$$target"; fi
@@ -116,9 +116,11 @@ services:
         until mysql -h ac-database -u root acore_characters -e 'SELECT 1' >/dev/null 2>&1; do sleep 2; done;
         mysql -h ac-database -u root acore_characters < /sql/dungeonrespawn.sql;
         mysql -h ac-database -u root acore_auth < /sql/account-ip.sql;
+        mysql -h ac-database -u root acore_world < /sql/capital-npcs.sql;
     volumes:
       - ./module-schema/dungeonrespawn.sql:/sql/dungeonrespawn.sql:ro
       - ./module-schema/account-ip.sql:/sql/account-ip.sql:ro
+      - ./module-schema/capital-npcs.sql:/sql/capital-npcs.sql:ro
     depends_on:
       ac-db-import:
         condition: service_completed_successfully

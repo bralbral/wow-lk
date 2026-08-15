@@ -31,6 +31,8 @@ Additional modules:
 
 - [DungeonRespawn](https://github.com/AnchyDev/DungeonRespawn)
 - [Dungeon Clear](https://github.com/jrad7/mod-dungeon-clear)
+- [1v1 Arena](https://github.com/azerothcore/mod-1v1-arena)
+- [Account-wide Mounts](https://github.com/azerothcore/mod-account-mounts)
 - [IP Tracker](https://github.com/azerothcore/mod-ip-tracker)
 - [Autofish](https://github.com/Flerp/mod-autofish)
 - [Game State API](https://github.com/abutbul/mod-game-state-api)
@@ -91,6 +93,7 @@ docker compose up -d --force-recreate ac-worldserver
 | `WOW_TRANSMOG_SCALED_COST` | `0.0` | Standard transmog cost multiplier; `0.0` makes it free with zero copper cost. |
 | `WOW_TRANSMOG_COPPER_COST` | `0` | Fixed additional transmog price in copper. `10000` copper is one gold. |
 | `WOW_TRANSMOG_MIXED_WEAPONS` | `1` | Weapon appearance rules: `0` strict, `1` modern compatibility, `2` unrestricted. |
+| `WOW_ARENA_AUTO_DISTRIBUTE_POINTS` | `1` | Distributes earned rated-arena points weekly. Unrated matches never award rating or points. |
 
 Most module settings are controlled from `.env`; `conf/wow.env.template` converts them to AzerothCore `AC_*` environment variables. Module `*.conf` files are created in `server/env/dist/etc/modules/`. Dungeon Clear deliberately keeps its tuning in its own module configuration so that settings can also be overridden temporarily by its companion addon.
 
@@ -98,6 +101,8 @@ Most module settings are controlled from `.env`; `conf/wow.env.template` convert
 | --- | --- | --- |
 | Dungeon Respawn | `WOW_DUNGEON_RESPAWN_ENABLED`, `WOW_DUNGEON_RESPAWN_HEALTH_PCT` | Returns a dead player to the dungeon entrance with the selected health percentage. |
 | Dungeon Clear | `server/env/dist/etc/modules/mod_dungeon_clear.conf` | No `.env` switch is required. The tank bot is enabled per group with `.dc on`; its server defaults live in this config file. |
+| 1v1 Arena | `WOW_ARENA_AUTO_DISTRIBUTE_POINTS`, `server/env/dist/etc/modules/1v1arena.conf` | Adds separate rated and unrated 1v1 queues without replacing 2v2, 3v3, or 5v5. |
+| Account-wide Mounts | `server/env/dist/etc/modules/mod_account_mount.conf` | On login, shares item-taught mount spells known by same-faction characters on the account. A local safety patch requires the target to have the necessary Riding skill, so low-level characters and class-only mounts are not granted. |
 | IP Tracker | `WOW_IP_TRACKER_ENABLED`, `WOW_IP_TRACKER_CLEANUP_DAYS` | Records account IP history. `0` disables automatic cleanup. |
 | Autofish | `WOW_AUTOFISH_*` | Controls bobber scan timing/range, automatic looting/recasting, and optional required item/equipment IDs. |
 | Game State API | `WOW_GAME_STATE_API_*` | Disabled by default. When enabled it listens on container port `8080`, published to `127.0.0.1:8080` by default. It has no authentication; do not expose it publicly. |
@@ -151,6 +156,29 @@ The persistent defaults are in `server/env/dist/etc/modules/mod_dungeon_clear.co
 
 Any `DungeonClear.*` setting can have a heroic-specific value by adding `.Heroic`, for example `DungeonClear.PullDynamicMaxLeeroyMobs.Heroic = 2`. The companion addon can override the general settings only for its current run; server-side file values remain the defaults. See the generated `.conf` for the full, commented configuration reference.
 
+### Playerbots: summon the party
+
+`mod-playerbots` commands are chat messages, not `.bots` GM commands. To bring bots from your current group to your location, write `summon` in **party chat**. Every bot in that group receives the message and teleports to you. To summon one bot only, whisper `summon` to that bot.
+
+Create an in-game macro for a single button that works in both a party and a raid:
+
+```lua
+#showtooltip
+/run SendChatMessage("summon", IsInRaid() and "RAID" or "PARTY")
+```
+
+The server configuration enables this behaviour (`AiPlayerbot.SummonWhenGroup = 1`) and allows it even when the player or a bot is dead or the group is in combat. No restart is required.
+
+### Account-wide mounts
+
+The account-scoped mount module is enabled by default. It needs no client patch, no commands, and no database migration: synchronisation runs when a character logs in.
+
+| Module | What it shares | Important settings |
+| --- | --- | --- |
+| Account-wide Mounts | Item-taught mount spells known by same-faction characters on the account. | `Account.Mounts.Enable`, `Account.Mounts.Announce`, `Account.Mounts.ExcludedSpellIDs`, `Account.Mounts.LimitRace`. The included default is `LimitRace = 1`. |
+
+The Account Mounts source is patched locally and the patch is reapplied by bootstrap. It only transfers spells taught by a mount item whose Riding requirement the target character already meets. This prevents low-level characters from using fast mounts and excludes class-only mounts that are learned without an item. To allow cross-faction mounts, set `Account.Mounts.LimitRace = 0` in `server/env/dist/etc/modules/mod_account_mount.conf`, then restart the worldserver. Existing characters' mount data is applied on their next login; no manual `.account` or GM command is needed.
+
 ### Game State API endpoints
 
 The API has no web page at `/`; use an `/api/...` endpoint. All responses are JSON.
@@ -177,11 +205,15 @@ curl 'http://127.0.0.1:8080/api/player/CharacterName/stats'
 
 The endpoints expose live player and realm information without authentication. Keep the default local-only API binding unless access is protected by a firewall or reverse proxy.
 
-To add the portable Transmog NPC as a GM:
+### Service NPC locations
 
-```text
-.npc add 190010
-```
+`Warpweaver` (transmog) is placed by the auction houses in Stormwind, Ironforge, Darnassus, Exodar, Undercity, Thunder Bluff, and Silvermoon. In Orgrimmar it stands on the visible central plaza beside the bank and mailbox.
+
+`Arena Battlemaster 1v1` is near the auction houses in Stormwind, Ironforge, Darnassus, Exodar, Undercity, Thunder Bluff, and Silvermoon. The Orgrimmar registrar is on the Hall of Legends PvP plaza, and an additional registrar is in the Dalaran Underbelly beside the regular Dalaran Arena NPCs.
+
+The 1v1 battlemaster offers an unrated queue to everyone and a rated queue after a character creates a personal 1v1 team. The same queues are available through `.q1v1 unrated` and `.q1v1 rated`; `.q1v1 stats` shows the team's results. The default rated-team requirement is level 80 and 40 gold, configurable in `1v1arena.conf`.
+
+Only rated matches affect rating and arena points. Points are paid weekly, not per win; the default core rules require 10 rated matches and at least 30% participation, and the 1v1 multiplier is `0.64`. Random Playerbots do not automatically fill the 1v1 queue, so it needs two real players unless bot support is added separately.
 
 ## Auction bot setup
 

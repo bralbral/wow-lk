@@ -1,0 +1,26 @@
+diff --git a/conf/mod_account_mount.conf.dist b/conf/mod_account_mount.conf.dist
+index a18e944..e5a69d6 100644
+--- a/conf/mod_account_mount.conf.dist
++++ b/conf/mod_account_mount.conf.dist
+@@ -21,4 +21,4 @@ Account.Mounts.ExcludedSpellIDs = 0
+ # 0 = will allow any race/class to own other racial/class-specific mounts.
+ # 1 = will enforce the limit.
+ 
+-Account.Mounts.LimitRace = 0
++Account.Mounts.LimitRace = 1
+diff --git a/src/mod_account_mount.cpp b/src/mod_account_mount.cpp
+index 13427d2..b860a17 100644
+--- a/src/mod_account_mount.cpp
++++ b/src/mod_account_mount.cpp
+@@ -63,5 +63,10 @@ public:
+             for (auto& i : Guids)
+             {
+-                QueryResult result2 = CharacterDatabase.Query("SELECT `spell` FROM `character_spell` WHERE `guid`={};", i);
++                QueryResult result2 = CharacterDatabase.Query(
++                    "SELECT character_spell.`spell` FROM `character_spell` "
++                    "INNER JOIN `acore_world`.`item_template` it ON it.`RequiredSkill` = {} "
++                    "AND it.`RequiredSkillRank` <= {} AND it.`spellid_2` = character_spell.`spell` "
++                    "WHERE character_spell.`guid` = {};",
++                    SKILL_RIDING, pPlayer->GetBaseSkillValue(SKILL_RIDING), i);
+                 if (!result2)
+                     continue;
