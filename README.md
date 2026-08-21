@@ -71,6 +71,7 @@ docker compose up -d --force-recreate ac-worldserver
 | `DOCKER_*_EXTERNAL_PORT` | `3306`, `3724`, `8085`, `7878` | Published MySQL, auth, world, and SOAP ports. Keep MySQL and SOAP local-only. |
 | `DOCKER_GAME_STATE_API_BIND_ADDRESS`, `DOCKER_GAME_STATE_API_EXTERNAL_PORT` | `127.0.0.1`, `8080` | Host binding and port for the optional Game State API. Local-only by default. |
 | `WOW_DB_DATA_DIR` | `../data/mysql` | Host path for the MySQL data directory, evaluated from `server/`. |
+| `WOW_DB_BINLOG_EXPIRE_LOGS_SECONDS` | `259200` | MySQL binary-log retention in seconds; `259200` is three days. Logs enable point-in-time recovery but consume disk space. |
 | `WOW_GAME_TYPE` | `0` | Realm type: `0` PvE, `1` PvP. |
 | `WOW_MAX_PLAYERS` | `20` | Maximum real player connections. |
 | `WOW_MAP_UPDATE_THREADS` | `2` | Map update threads. Use no more than available CPU cores. |
@@ -94,6 +95,8 @@ docker compose up -d --force-recreate ac-worldserver
 | `WOW_TRANSMOG_COPPER_COST` | `0` | Fixed additional transmog price in copper. `10000` copper is one gold. |
 | `WOW_TRANSMOG_MIXED_WEAPONS` | `1` | Weapon appearance rules: `0` strict, `1` modern compatibility, `2` unrestricted. |
 | `WOW_ARENA_AUTO_DISTRIBUTE_POINTS` | `1` | Distributes earned rated-arena points weekly. Unrated matches never award rating or points. |
+| `WOW_BATTLEGROUND_PREP_TIME` | `30` | Battleground preparation time in seconds before combat begins. Strand of the Ancients always uses its fixed 120 seconds. |
+| `WOW_ARENA_PREP_TIME` | `15` | Arena preparation time in seconds before combat begins. |
 
 Most module settings are controlled from `.env`; `conf/wow.env.template` converts them to AzerothCore `AC_*` environment variables. Module `*.conf` files are created in `server/env/dist/etc/modules/`. Dungeon Clear deliberately keeps its tuning in its own module configuration so that settings can also be overridden temporarily by its companion addon.
 
@@ -213,7 +216,7 @@ The endpoints expose live player and realm information without authentication. K
 
 The 1v1 battlemaster offers an unrated queue to everyone and a rated queue after a character creates a personal 1v1 team. The same queues are available through `.q1v1 unrated` and `.q1v1 rated`; `.q1v1 stats` shows the team's results. The default rated-team requirement is level 80 and 40 gold, configurable in `1v1arena.conf`.
 
-Only rated matches affect rating and arena points. Points are paid weekly, not per win; the default core rules require 10 rated matches and at least 30% participation, and the 1v1 multiplier is `0.64`. Random Playerbots do not automatically fill the 1v1 queue, so it needs two real players unless bot support is added separately.
+Only rated matches affect rating and arena points. Points are paid weekly, not per win; the default core rules require 10 rated matches and at least 30% participation, and the 1v1 multiplier is `0.64`. Random Playerbots automatically fill a real player's rated 1v1 queue. A selected bot receives a personal 1v1 team on first use and its MMR is matched to the queued player so that the match starts immediately. Bot gear is still determined by character level and Playerbot equipment settings, not arena rating.
 
 ## Auction bot setup
 

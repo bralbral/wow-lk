@@ -18,6 +18,7 @@ git -C "$server" submodule update --init --recursive
 
 git clone https://github.com/mod-playerbots/mod-playerbots.git "$server/modules/mod-playerbots"
 git -C "$server/modules/mod-playerbots" checkout "$PLAYERBOTS_REF"
+git -C "$server/modules/mod-playerbots" apply "$root/patches/mod-playerbots-rated-1v1.patch"
 git clone https://github.com/jrad7/mod-dungeon-clear.git "$server/modules/mod-dungeon-clear"
 git -C "$server/modules/mod-dungeon-clear" checkout "$DUNGEON_CLEAR_REF"
 git -C "$server/modules/mod-dungeon-clear" apply "$root/patches/mod-dungeon-clear-chat-status.patch"

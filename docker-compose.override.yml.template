@@ -25,6 +25,10 @@ services:
       - "${WOW_BIND_ADDRESS:-127.0.0.1}:${DOCKER_AUTH_EXTERNAL_PORT:-3724}:3724"
 
   ac-database:
+    # MySQL binary logs support point-in-time recovery, but can grow quickly.
+    # Set retention in seconds; 259200 is three days.
+    command:
+      - "--binlog-expire-logs-seconds=${WOW_DB_BINLOG_EXPIRE_LOGS_SECONDS:-259200}"
     ports: !override
       - "${WOW_BIND_ADDRESS:-127.0.0.1}:${DOCKER_DB_EXTERNAL_PORT:-3306}:3306"
     volumes: !override

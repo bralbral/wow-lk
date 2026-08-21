@@ -1,0 +1,166 @@
+diff --git a/src/Ai/Base/Actions/BattleGroundJoinAction.cpp b/src/Ai/Base/Actions/BattleGroundJoinAction.cpp
+index bb0f0100..9d31b9f5 100644
+--- a/src/Ai/Base/Actions/BattleGroundJoinAction.cpp
++++ b/src/Ai/Base/Actions/BattleGroundJoinAction.cpp
+@@ -8,7 +8,10 @@
+ 
+ #include "ArenaTeam.h"
+ #include "ArenaTeamMgr.h"
++#include "Battleground.h"
++#include "BattlegroundQueue.h"
+ #include "BattlegroundMgr.h"
++#include "Config.h"
+ #include "Event.h"
+ #include "GroupMgr.h"
+ #include "PlayerbotAI.h"
+@@ -59,6 +62,10 @@ bool BGJoinAction::Execute(Event /*event*/)
+ 
+ bool BGJoinAction::gatherArenaTeam(ArenaType type)
+ {
++    // A rated 1v1 team contains its captain only; no party needs to be made.
++    if (type == static_cast<ArenaType>(1))
++        return sArenaTeamMgr->GetArenaTeamByCaptain(bot->GetGUID(), type) != nullptr;
++
+     ArenaTeam* arenateam = sArenaTeamMgr->GetArenaTeamByCaptain(bot->GetGUID(), type);
+ 
+     if (!arenateam)
+@@ -193,6 +196,36 @@ bool BGJoinAction::gatherArenaTeam(ArenaType type)
+     return false;
+ }
+ 
++bool BGJoinAction::ensureOneVsOneArenaTeam(uint32 matchmakerRating)
++{
++    constexpr ArenaType ARENA_TYPE_1V1 = static_cast<ArenaType>(1);
++
++    if (ArenaTeam* team = sArenaTeamMgr->GetArenaTeamByCaptain(bot->GetGUID(), ARENA_TYPE_1V1))
++    {
++        // Match the queued player's MMR so the core starts the rated game immediately.
++        team->SetRatingForAll(matchmakerRating);
++        team->SaveToDB();
++        return true;
++    }
++
++    if (bot->GetLevel() < sConfigMgr->GetOption<uint32>("Arena1v1.MinLevel", 80))
++        return false;
++
++    ArenaTeam* team = new ArenaTeam();
++    std::string const name = bot->GetName() + " 1v1";
++    if (!team->Create(bot->GetGUID(), ARENA_TYPE_1V1, name, 0, 0, 0, 0, 0))
++    {
++        delete team;
++        return false;
++    }
++
++    team->SetCaptain(bot->GetGUID());
++    team->SetRatingForAll(matchmakerRating);
++    team->SaveToDB();
++    sArenaTeamMgr->AddArenaTeam(team);
++    return true;
++}
++
+ bool BGJoinAction::canJoinBg(BattlegroundQueueTypeId queueTypeId, BattlegroundBracketId bracketId)
+ {
+     // check if bot can join this bracket for the specific Battleground/Arena type
+@@ -240,6 +273,7 @@ bool BGJoinAction::shouldJoinBg(BattlegroundQueueTypeId queueTypeId, Battlegroun
+     ArenaType type = ArenaType(BattlegroundMgr::BGArenaType(queueTypeId));
+     if (type != ARENA_TYPE_NONE)
+     {
++        constexpr ArenaType ARENA_TYPE_1V1 = static_cast<ArenaType>(1);
+         BracketSize = (uint32)(type * 2);
+         TeamSize = (uint32)type;
+ 
+@@ -257,6 +291,31 @@ bool BGJoinAction::shouldJoinBg(BattlegroundQueueTypeId queueTypeId, Battlegroun
+ 
+         if (isRated)
+         {
++            if (type == ARENA_TYPE_1V1)
++            {
++                uint32 matchmakerRating = 0;
++                BattlegroundQueue& queue = sBattlegroundMgr->GetBattlegroundQueue(queueTypeId);
++                for (Player* player : sRandomPlayerbotMgr.GetPlayers())
++                {
++                    if (!player || !player->InBattlegroundQueueForBattlegroundQueueType(queueTypeId))
++                        continue;
++
++                    GroupQueueInfo groupInfo;
++                    if (queue.GetPlayerGroupInfoData(player->GetGUID(), &groupInfo) && groupInfo.IsRated)
++                    {
++                        matchmakerRating = groupInfo.ArenaMatchmakerRating;
++                        break;
++                    }
++                }
++
++                if (!ensureOneVsOneArenaTeam(matchmakerRating))
++                    return false;
++
++                sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].ratedArenaBotCount++;
++                ratedList.push_back(queueTypeId);
++                return true;
++            }
++
+             if (sArenaTeamMgr->GetArenaTeamByCaptain(bot->GetGUID(), type))
+             {
+                 sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].ratedArenaBotCount += TeamSize;
+@@ -265,6 +324,11 @@ bool BGJoinAction::shouldJoinBg(BattlegroundQueueTypeId queueTypeId, Battlegroun
+             }
+         }
+ 
++        // 1v1 Playerbots participate in rated games only. The module's queue is
++        // custom and cannot be joined through the stock arena battlemaster packet.
++        if (type == ARENA_TYPE_1V1)
++            return false;
++
+         // Check if bots should join Skirmish Arena
+         // We have extra bots queue because same faction can vs each other but can't be in the same group.
+         uint32 skirmishArenaBotCount =
+@@ -430,6 +494,38 @@ bool BGJoinAction::JoinQueue(uint32 type)
+     if (arenaType != ARENA_TYPE_NONE)
+         isArena = true;
+ 
++    constexpr ArenaType ARENA_TYPE_1V1 = static_cast<ArenaType>(1);
++    if (arenaType == ARENA_TYPE_1V1)
++    {
++        bool const isRated = botAI->GetAiObjectContext()->GetValue<uint32>("arena type")->Get();
++        ArenaTeam* team = sArenaTeamMgr->GetArenaTeamByCaptain(bot->GetGUID(), ARENA_TYPE_1V1);
++        if (!isRated || !team)
++            return false;
++
++        uint32 const arenaRating = team->GetRating();
++        BattlegroundQueue& queue = sBattlegroundMgr->GetBattlegroundQueue(queueTypeId);
++        bg->SetRated(true);
++        bg->SetMaxPlayersPerTeam(1);
++
++        GroupQueueInfo* groupInfo = queue.AddGroup(bot, nullptr, bgTypeId, pvpDiff, ARENA_TYPE_1V1, true, false,
++                                                    arenaRating, arenaRating, team->GetId(), 0);
++        if (!groupInfo)
++            return false;
++
++        uint32 const queueSlot = bot->AddBattlegroundQueueId(queueTypeId);
++        WorldPacket data;
++        sBattlegroundMgr->BuildBattlegroundStatusPacket(&data, bg, queueSlot, STATUS_WAIT_QUEUE,
++                                                         queue.GetAverageQueueWaitTime(groupInfo), 0,
++                                                         ARENA_TYPE_1V1, TEAM_NEUTRAL, true);
++        bot->GetSession()->SendPacket(&data);
++        sBattlegroundMgr->ScheduleQueueUpdate(arenaRating, ARENA_TYPE_1V1, queueTypeId, bgTypeId,
++                                              pvpDiff->GetBracketId());
++        botAI->GetAiObjectContext()->GetValue<uint32>("bg type")->Set(0);
++        LOG_INFO("playerbots", "Bot {} <{}> queued rated 1v1 arena", bot->GetGUID().ToString().c_str(),
++                 bot->GetName().c_str());
++        return true;
++    }
++
+     // get battlemaster
+     // Unit* unit = botAI->GetUnit(AI_VALUE2(CreatureData const*, "bg master", bgTypeId));
+     Unit* unit = botAI->GetUnit(sRandomPlayerbotMgr.GetBattleMasterGUID(bot, bgTypeId));
+diff --git a/src/Ai/Base/Actions/BattleGroundJoinAction.h b/src/Ai/Base/Actions/BattleGroundJoinAction.h
+index 79c84001..1961fceb 100644
+--- a/src/Ai/Base/Actions/BattleGroundJoinAction.h
++++ b/src/Ai/Base/Actions/BattleGroundJoinAction.h
+@@ -30,6 +30,7 @@ public:
+     virtual bool gatherArenaTeam(ArenaType type);
+ 
+ protected:
++    bool ensureOneVsOneArenaTeam(uint32 matchmakerRating);
+     bool JoinQueue(uint32 type);
+     std::vector<uint32> bgList;
+     std::vector<uint32> ratedList;
