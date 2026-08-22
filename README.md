@@ -1,4 +1,4 @@
-# WotLK Playerbot Server
+#  WoW WotLK Playerbot Server
 
 Docker Compose setup for a private World of Warcraft: Wrath of the Lich King 3.3.5a realm. It builds a pinned [AzerothCore Playerbot](https://github.com/mod-playerbots/azerothcore-wotlk) server with gameplay modules, MySQL, and reproducible GitHub Actions images.
 
